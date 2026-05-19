@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TDABC Procedure Capture</title>
+
+<!-- Microsoft Authentication Library — IT: do not remove -->
+<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;background:#f4f6fa;min-height:100vh}
+.header{background:#185FA5;color:white;padding:16px 20px}
+.header h1{font-size:17px;font-weight:600}
+.header p{font-size:12px;opacity:0.8;margin-top:2px}
+.container{max-width:720px;margin:0 auto;padding:16px}
+.card{background:#fff;border-radius:10px;padding:18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.07)}
+.card-title{font-size:13px;font-weight:600;color:#185FA5;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12px;color:#555;margin-bottom:4px;font-weight:500}
+.field input,.field select,.field textarea{width:100%;border:1px solid #ddd;border-radius:7px;padding:9px 12px;font-size:14px;font-family:Arial,sans-serif;color:#1a1a1a;background:#fff}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#185FA5;box-shadow:0 0 0 2px rgba(24,95,165,0.1)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.popup-btn{width:100%;background:#f0f6fd;border:1px solid #b5d4f4;color:#185FA5;border-radius:7px;padding:9px 12px;font-size:13px;cursor:pointer;text-align:left;font-family:Arial,sans-serif}
+.popup-btn:hover{background:#dceefa}
+.popup-btn.has-data{background:#e6f7ef;border-color:#8ed4b0;color:#1a7a4a}
+.preview{font-size:12px;color:#555;margin-top:5px;line-height:1.7}
+.tip{font-size:12px;color:#888;background:#f0f6fd;border-left:3px solid #185FA5;padding:8px 12px;border-radius:0 7px 7px 0;margin-bottom:12px}
+.submit-btn{width:100%;background:#185FA5;color:white;border:none;border-radius:9px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:Arial,sans-serif;margin-top:4px}
+.submit-btn:hover{background:#0C447C}
+.submit-btn:disabled{background:#aaa;cursor:not-allowed}
+.status{text-align:center;font-size:13px;margin-top:10px;padding:10px;border-radius:7px;display:none}
+.status.success{background:#e6f7ef;color:#1a7a4a;display:block}
+.status.error{background:#fdeaea;color:#B91C1C;display:block}
+.status.loading{background:#f0f6fd;color:#185FA5;display:block}
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:500px;max-height:80vh;overflow-y:auto}
+.modal-title{font-size:15px;font-weight:600;color:#185FA5;margin-bottom:4px}
+.modal-sub{font-size:12px;color:#888;margin-bottom:14px}
+.modal-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.modal-row input{flex:1;border:1px solid #ddd;border-radius:7px;padding:8px 10px;font-size:13px;font-family:Arial,sans-serif}
+.modal-row input:focus{outline:none;border-color:#185FA5}
+.modal-row .del-btn{background:none;border:none;color:#ccc;font-size:18px;cursor:pointer;padding:4px 6px;flex-shrink:0}
+.modal-row .del-btn:hover{color:#E24B4A}
+.modal-add-btn{font-size:13px;color:#185FA5;background:none;border:none;cursor:pointer;padding:4px 0;font-family:Arial,sans-serif;margin-bottom:12px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;padding-top:12px;border-top:1px solid #eee}
+.modal-save{background:#185FA5;color:white;border:none;border-radius:7px;padding:9px 22px;font-size:13px;font-weight:600;cursor:pointer;font-family:Arial,sans-serif}
+.modal-cancel{background:none;border:1px solid #ccc;color:#555;border-radius:7px;padding:9px 16px;font-size:13px;cursor:pointer;font-family:Arial,sans-serif}
+.col-label{font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:0.04em;padding:0 2px;flex:1}
+.col-labels{display:flex;gap:8px;margin-bottom:2px;padding-right:34px}
+@media(min-width:600px){.modal-overlay{align-items:center}.modal{border-radius:16px;max-width:480px}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>TDABC Procedure Capture</h1>
+  <p>Complete one row per activity step</p>
+</div>
+
+<div class="container">
+
+  <!-- ── SECTION A: General info ── -->
+  <div class="card">
+    <div class="card-title">General information</div>
+    <div class="row2">
+      <div class="field"><label>Department *</label><input type="text" id="f-dept" placeholder="e.g. General Surgery" required></div>
+      <div class="field"><label>Doctor / clinician name *</label><input type="text" id="f-doc" placeholder="Full name" required></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Visit type *</label>
+        <select id="f-visit">
+          <option value="">Select...</option>
+          <option>Outpatient</option><option>Inpatient</option><option>Emergency</option>
+          <option>ICU</option><option>Theatre</option><option>Day case</option>
+        </select>
+      </div>
+      <div class="field"><label>Procedure name *</label><input type="text" id="f-proc" placeholder="e.g. Appendectomy"></div>
+    </div>
+  </div>
+
+  <!-- ── SECTION B: Activity step ── -->
+  <div class="card">
+    <div class="card-title">Activity step</div>
+    <div class="tip">&#9432; Submit one form per activity step. For a procedure with 6 steps, submit 6 times — your general information will stay filled in.</div>
+    <div class="row2">
+      <div class="field"><label>Step / activity *</label><input type="text" id="f-step" placeholder="e.g. Patient assessment"></div>
+      <div class="field"><label>Staff category *</label>
+        <select id="f-staff">
+          <option value="">Select...</option>
+          <option>Consultant</option><option>Medical officer</option><option>Nurse</option>
+          <option>Healthcare assistant</option><option>Porter</option><option>Pharmacist</option>
+          <option>Lab scientist</option><option>Radiographer</option><option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Number of staff involved *</label><input type="number" id="f-nstaff" min="1" placeholder="1"></div>
+      <div class="field"><label>Time spent on this step (minutes) *</label><input type="number" id="f-time" min="0" placeholder="e.g. 15"></div>
+    </div>
+  </div>
+
+  <!-- ── SECTION C: Consumables ── -->
+  <div class="card">
+    <div class="card-title">Consumables used in this step</div>
+    <button class="popup-btn" id="cons-btn" onclick="openModal('cons')">+ Add consumables</button>
+    <div class="preview" id="cons-preview"></div>
+  </div>
+
+  <!-- ── SECTION D: Equipment ── -->
+  <div class="card">
+    <div class="card-title">Equipment used in this step</div>
+    <button class="popup-btn" id="equip-btn" onclick="openModal('equip')">+ Add equipment</button>
+    <div class="preview" id="equip-preview"></div>
+  </div>
+
+  <!-- ── SECTION E: Notes ── -->
+  <div class="card">
+    <div class="card-title">Notes (optional)</div>
+    <div class="field"><textarea id="f-notes" placeholder="Any delays, comments, or observations..." rows="3"></textarea></div>
+  </div>
+
+  <!-- ── Submit ── -->
+  <div class="card">
+    <button class="submit-btn" id="submit-btn" onclick="submitForm()">Submit this step &#10003;</button>
+    <div class="status" id="status-msg"></div>
+  </div>
+
+</div>
+
+<!-- CONSUMABLES MODAL -->
+<div class="modal-overlay" id="cons-modal">
+  <div class="modal">
+    <div class="modal-title">Consumables used</div>
+    <div class="modal-sub">Add each item separately with its quantity and unit.</div>
+    <div class="col-labels"><span class="col-label">Item name</span><span class="col-label">Quantity</span><span class="col-label">Unit</span></div>
+    <div id="cons-modal-rows"></div>
+    <button class="modal-add-btn" onclick="addConsRow()">+ Add another item</button>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('cons')">Cancel</button>
+      <button class="modal-save" onclick="saveModal('cons')">Save &#10003;</button>
+    </div>
+  </div>
+</div>
+
+<!-- EQUIPMENT MODAL -->
+<div class="modal-overlay" id="equip-modal">
+  <div class="modal">
+    <div class="modal-title">Equipment used</div>
+    <div class="modal-sub">List all equipment and machines used in this step.</div>
+    <div id="equip-modal-rows"></div>
+    <button class="modal-add-btn" onclick="addEquipRow()">+ Add another item</button>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('equip')">Cancel</button>
+      <button class="modal-save" onclick="saveModal('equip')">Save &#10003;</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// ⚙️  IT CONFIGURATION — fill these in
+// ─────────────────────────────────────────────
+const GRAPH_CONFIG = {
+  clientId: 'b4422db5-2b43-4f69-8a27-3bd1d4d1f85e', // Azure App Registration client ID
+  tenantId: '0656307e-3ae2-447b-8f4c-0a286915f5c0', // Azure AD tenant ID
+  siteId:   'YOUR_SHAREPOINT_SITE_ID',               // SharePoint site ID — add after deployment
+  listId:   'YOUR_LIST_ID',                          // TDABC_Responses list ID — add after deployment
+};
+// ─────────────────────────────────────────────
+
+let msalInstance = null;
+let consItems = [];
+let equipItems = [];
+
+// Init MSAL
+function initMsal() {
+  msalInstance = new msal.PublicClientApplication({
+    auth: {
+      clientId: GRAPH_CONFIG.clientId,
+      authority: `https://login.microsoftonline.com/${GRAPH_CONFIG.tenantId}`,
+      redirectUri: window.location.href.split('?')[0],
+    },
+    cache: { cacheLocation: 'sessionStorage' }
+  });
+}
+
+async function getToken() {
+  const accounts = msalInstance.getAllAccounts();
+  const request = { scopes: ['Sites.ReadWrite.All'], account: accounts[0] };
+  try {
+    const res = await msalInstance.acquireTokenSilent(request);
+    return res.accessToken;
+  } catch {
+    const res = await msalInstance.acquireTokenPopup(request);
+    return res.accessToken;
+  }
+}
+
+// ── MODALS ──
+function openModal(type) {
+  const modal = document.getElementById(`${type}-modal`);
+  const rows = document.getElementById(`${type}-modal-rows`);
+  rows.innerHTML = '';
+  if (type === 'cons') {
+    if (consItems.length) consItems.forEach(c => addConsRow(c.item, c.qty, c.unit));
+    else { addConsRow(); addConsRow(); }
+  } else {
+    if (equipItems.length) equipItems.forEach(e => addEquipRow(e.name));
+    else { addEquipRow(); addEquipRow(); }
+  }
+  modal.classList.add('open');
+}
+
+function closeModal(type) {
+  document.getElementById(`${type}-modal`).classList.remove('open');
+}
+
+function addConsRow(item='', qty='', unit='') {
+  const div = document.createElement('div');
+  div.className = 'modal-row';
+  div.innerHTML = `<input type="text" placeholder="e.g. Surgical gloves" value="${item}">
+    <input type="number" min="0" placeholder="Qty" value="${qty}" style="max-width:70px">
+    <input type="text" placeholder="Unit" value="${unit}" style="max-width:80px">
+    <button class="del-btn" onclick="this.parentNode.remove()">&#215;</button>`;
+  document.getElementById('cons-modal-rows').appendChild(div);
+}
+
+function addEquipRow(name='') {
+  const div = document.createElement('div');
+  div.className = 'modal-row';
+  div.innerHTML = `<input type="text" placeholder="e.g. Ultrasound machine" value="${name}" style="flex:1">
+    <button class="del-btn" onclick="this.parentNode.remove()">&#215;</button>`;
+  document.getElementById('equip-modal-rows').appendChild(div);
+}
+
+function saveModal(type) {
+  if (type === 'cons') {
+    const rows = document.querySelectorAll('#cons-modal-rows .modal-row');
+    consItems = [...rows].map(r => {
+      const inputs = r.querySelectorAll('input');
+      return { item: inputs[0].value.trim(), qty: inputs[1].value, unit: inputs[2].value.trim() };
+    }).filter(c => c.item);
+    const btn = document.getElementById('cons-btn');
+    const prev = document.getElementById('cons-preview');
+    btn.className = 'popup-btn' + (consItems.length ? ' has-data' : '');
+    btn.textContent = consItems.length ? `✓ ${consItems.length} item(s) — tap to edit` : '+ Add consumables';
+    prev.innerHTML = consItems.map(c => `• ${c.item}${c.qty ? ' ×' + c.qty : ''}${c.unit ? ' ' + c.unit : ''}`).join('<br>');
+  } else {
+    const rows = document.querySelectorAll('#equip-modal-rows .modal-row');
+    equipItems = [...rows].map(r => {
+      const input = r.querySelector('input');
+      return { name: input ? input.value.trim() : '' };
+    }).filter(e => e.name);
+    const btn = document.getElementById('equip-btn');
+    const prev = document.getElementById('equip-preview');
+    btn.className = 'popup-btn' + (equipItems.length ? ' has-data' : '');
+    btn.textContent = equipItems.length ? `✓ ${equipItems.length} item(s) — tap to edit` : '+ Add equipment';
+    prev.innerHTML = equipItems.map(e => `• ${e.name}`).join('<br>');
+  }
+  closeModal(type);
+}
+
+// Close modal on backdrop tap
+['cons-modal','equip-modal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+});
+
+// ── FORM SUBMISSION ──
+function validate() {
+  const required = ['f-dept','f-doc','f-visit','f-proc','f-step','f-staff','f-time'];
+  for (const id of required) {
+    const el = document.getElementById(id);
+    if (!el.value.trim()) { el.focus(); return false; }
+  }
+  return true;
+}
+
+function setStatus(type, msg) {
+  const el = document.getElementById('status-msg');
+  el.className = 'status ' + type;
+  el.textContent = msg;
+}
+
+async function submitForm() {
+  if (!validate()) { setStatus('error', 'Please fill in all required fields (marked with *).'); return; }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  setStatus('loading', 'Submitting... please wait.');
+
+  const payload = {
+    fields: {
+      Department:    document.getElementById('f-dept').value.trim(),
+      DoctorName:    document.getElementById('f-doc').value.trim(),
+      VisitType:     document.getElementById('f-visit').value,
+      Procedure:     document.getElementById('f-proc').value.trim(),
+      StepActivity:  document.getElementById('f-step').value.trim(),
+      StaffCategory: document.getElementById('f-staff').value,
+      NumberOfStaff: parseInt(document.getElementById('f-nstaff').value) || 1,
+      TimeMinutes:   parseFloat(document.getElementById('f-time').value) || 0,
+      Consumables:   JSON.stringify(consItems),
+      Equipment:     JSON.stringify(equipItems),
+      Notes:         document.getElementById('f-notes').value.trim(),
+    }
+  };
+
+  try {
+    const token = await getToken();
+    const url = `https://graph.microsoft.com/v1.0/sites/${GRAPH_CONFIG.siteId}/lists/${GRAPH_CONFIG.listId}/items`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      setStatus('success', '✓ Step submitted successfully! Fill in the next step below.');
+      // Clear step-specific fields but keep general info
+      ['f-step','f-time','f-notes'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('f-staff').value = '';
+      document.getElementById('f-nstaff').value = '';
+      consItems = []; equipItems = [];
+      ['cons-btn','equip-btn'].forEach(id => {
+        document.getElementById(id).className = 'popup-btn';
+        document.getElementById(id).textContent = id === 'cons-btn' ? '+ Add consumables' : '+ Add equipment';
+      });
+      ['cons-preview','equip-preview'].forEach(id => document.getElementById(id).innerHTML = '');
+    } else {
+      const err = await res.json();
+      setStatus('error', 'Submission failed: ' + (err.error?.message || res.statusText));
+    }
+  } catch (e) {
+    // ── FALLBACK for when Graph API not yet configured ──
+    // Remove this block once IT has configured the GRAPH_CONFIG above
+    console.warn('Graph API not configured, using fallback download:', e.message);
+    downloadFallback(payload.fields);
+  }
+
+  btn.disabled = false;
+}
+
+// Fallback: download as JSON if API not configured yet
+function downloadFallback(data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `TDABC_${data.Procedure.replace(/\s+/g,'_')}_${data.StepActivity.replace(/\s+/g,'_')}.json`;
+  a.click();
+  setStatus('success', '✓ Downloaded as JSON (SharePoint not yet configured). Send file to your costing team.');
+}
+
+// Initialise
+try { initMsal(); } catch(e) { console.log('MSAL init skipped (IT config pending)'); }
+</script>
+</body>
+</html>
