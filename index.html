@@ -91,10 +91,90 @@ body{font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;background:#f4f6f
       <div class="field"><label>Staff category *</label>
         <select id="f-staff">
           <option value="">Select...</option>
-          <option>Consultant</option><option>Medical officer</option><option>Nurse</option>
-          <option>Healthcare assistant</option><option>Porter</option><option>Pharmacist</option>
-          <option>Lab scientist</option><option>Radiographer</option><option>Other</option>
+          <optgroup label="Medical — Consultants & Specialists">
+            <option>Anaesthetist</option>
+            <option>Breast Surgeon</option>
+            <option>Cardiologist</option>
+            <option>Cardiothoracic Surgeon</option>
+            <option>Dermatologist</option>
+            <option>Endocrinologist</option>
+            <option>ENT Surgeon</option>
+            <option>Family Medicine Physician</option>
+            <option>Gastroenterologist</option>
+            <option>General Surgeon</option>
+            <option>Geriatrician</option>
+            <option>Gynaecologist</option>
+            <option>Haematologist</option>
+            <option>Nephrologist</option>
+            <option>Neurologist</option>
+            <option>Neurosurgeon</option>
+            <option>Obstetrician</option>
+            <option>Oncologist</option>
+            <option>Ophthalmologist</option>
+            <option>Orthopaedic Surgeon</option>
+            <option>Paediatrician</option>
+            <option>Paediatric Surgeon</option>
+            <option>Plastic Surgeon</option>
+            <option>Psychiatrist</option>
+            <option>Pulmonologist</option>
+            <option>Rheumatologist</option>
+            <option>Urologist</option>
+          </optgroup>
+          <optgroup label="Medical — Non-Specialist Doctors">
+            <option>Consultant (General)</option>
+            <option>Medical Officer</option>
+            <option>Registrar</option>
+            <option>House Officer</option>
+            <option>Senior Registrar</option>
+          </optgroup>
+          <optgroup label="Nursing">
+            <option>Nurse (General)</option>
+            <option>Senior Nurse</option>
+            <option>Scrub Nurse</option>
+            <option>ICU Nurse</option>
+            <option>Theatre Nurse</option>
+            <option>Midwife</option>
+            <option>Community Health Officer</option>
+            <option>Community Health Extension Worker</option>
+          </optgroup>
+          <optgroup label="Allied Health">
+            <option>Anaesthesia Technician</option>
+            <option>Audiologist</option>
+            <option>Dental Therapist</option>
+            <option>Dentist</option>
+            <option>Dietitian</option>
+            <option>Healthcare Assistant</option>
+            <option>Medical Social Worker</option>
+            <option>Occupational Therapist</option>
+            <option>Optometrist</option>
+            <option>Physiotherapist</option>
+            <option>Prosthetist</option>
+            <option>Speech Therapist</option>
+          </optgroup>
+          <optgroup label="Diagnostics & Pharmacy">
+            <option>Lab Scientist</option>
+            <option>Lab Technician</option>
+            <option>Pharmacist</option>
+            <option>Pharmacy Technician</option>
+            <option>Radiographer</option>
+            <option>Sonographer</option>
+          </optgroup>
+          <optgroup label="Support Staff">
+            <option>Porter</option>
+            <option>Ward Clerk</option>
+            <option>Cleaner / Housekeeper</option>
+            <option>Security</option>
+            <option>Receptionist / Admin</option>
+            <option>Medical Records Officer</option>
+          </optgroup>
+          <optgroup label="Other">
+            <option>Other — please specify below</option>
+          </optgroup>
         </select>
+      </div>
+      <div class="field" id="staff-other-field" style="display:none">
+        <label>Please specify staff category *</label>
+        <input type="text" id="f-staff-other" placeholder="e.g. Perfusionist, Art Therapist...">
       </div>
     </div>
     <div class="row2">
@@ -172,6 +252,12 @@ let consItems = [];
 let equipItems = [];
 
 // No authentication needed — Google Apps Script handles it
+
+// Show/hide Other staff field
+document.getElementById('f-staff').addEventListener('change', function() {
+  var otherField = document.getElementById('staff-other-field');
+  otherField.style.display = this.value === 'Other — please specify below' ? 'block' : 'none';
+});
 
 // ── MODALS ──
 function openModal(type) {
@@ -251,6 +337,11 @@ function validate() {
     const el = document.getElementById(id);
     if (!el.value.trim()) { el.focus(); return false; }
   }
+  // If Other selected, must specify
+  if (document.getElementById('f-staff').value === 'Other — please specify below') {
+    const other = document.getElementById('f-staff-other');
+    if (!other.value.trim()) { other.focus(); return false; }
+  }
   return true;
 }
 
@@ -263,6 +354,8 @@ function setStatus(type, msg) {
 function clearStepFields() {
   ['f-step','f-time','f-notes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f-staff').value = '';
+  document.getElementById('f-staff-other').value = '';
+  document.getElementById('staff-other-field').style.display = 'none';
   document.getElementById('f-nstaff').value = '';
   consItems = []; equipItems = [];
   ['cons-btn','equip-btn'].forEach(id => {
@@ -285,7 +378,10 @@ async function submitForm() {
     VisitType:     document.getElementById('f-visit').value,
     Procedure:     document.getElementById('f-proc').value.trim(),
     StepActivity:  document.getElementById('f-step').value.trim(),
-    StaffCategory: document.getElementById('f-staff').value,
+    StaffCategory: (function(){
+      var sel = document.getElementById('f-staff').value;
+      return sel === 'Other — please specify below' ? document.getElementById('f-staff-other').value.trim() : sel;
+    })(),
     NumberOfStaff: parseInt(document.getElementById('f-nstaff').value) || 1,
     TimeMinutes:   parseFloat(document.getElementById('f-time').value) || 0,
     Consumables:   JSON.stringify(consItems),
